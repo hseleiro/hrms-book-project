@@ -20,5 +20,4 @@ export class EmployeeService {
   getEmployee(id: number) {
     return this.http.get<any>(`/api/employees/${id}`);
   }
-
 }

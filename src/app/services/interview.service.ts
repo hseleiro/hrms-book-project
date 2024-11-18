@@ -13,5 +13,4 @@ export class InterviewService {
   createInterview(interviewer: Employee){
     return this.http.post<Employee>('/api/interviews', {interviewer});
   }
-
 }
