@@ -34,5 +34,33 @@ export const routes: Routes = [
       const m = await import('./pages/projects/projects.routes');
       return m.routes;
     }
+  },
+  {
+    path: 'time',
+    loadComponent: async () => {
+      const m = await import('./pages/work/time-off-management.component');
+      return m.TimeOffManagementComponent;
+    }
+  },
+  {
+    path: 'observable', loadComponent: async() => {
+      const component = await import('./pages/work/observable-test')
+      return component.ObservableTestComponent;
+    },
+  },
+  {
+    path: 'teste',
+    loadComponent: async () => {
+      const component = await import('./pages/work/observable-test');
+      return component.ObservableTestComponent
+    }
+  },
+  {
+    path: 'unit',
+    loadComponent: async () => {
+      const component = await import('./pages/work/unit-test.component');
+      return component.UnitTestComponent;
+    }
   }
+
 ];
