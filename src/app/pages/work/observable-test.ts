@@ -7,6 +7,8 @@ import {FormsModule} from "@angular/forms";
 @Component({
   selector: 'observable-test',
   template: `
+    <div> SIGNALS </div>
+    <div>########################################################################################################</div>
     <form>
       <label>Select between sold and not sold products</label>
       <select id="status" [(ngModel)]="soldStateSignal" name="status" (ngModelChange)="filterProductsSignal()">
@@ -35,9 +37,13 @@ import {FormsModule} from "@angular/forms";
         <br>
         <div>Categories:</div>
         <br>
-        <div *ngFor="let category of productSignal.categories; index as categoryIndex">
-          <span [ngClass]="{'selected' : category.selected}" (click)="selectCategory(categoryIndex, productSignal.id)">{{category.name}}</span>
-        </div>
+        <div>Selecte category</div>
+        <br>
+        <span *ngFor="let category of productSignal.categories; index as categoryIndex">
+          | <span [ngClass]="{'selected' : category.selected}"
+                (click)="selectCategory(categoryIndex, productSignal.id)">{{ category.name }}</span>
+        </span>
+        <br>
         <br>
       </li>
     </ng-container>
@@ -50,8 +56,10 @@ import {FormsModule} from "@angular/forms";
     </ng-template>
     <br>
     <br>
-
-
+    <br>
+    <div> OBSERVABLES </div>
+    <div>####################################################################################</div>
+    <br>
     <form>
       <label>Select between sold and not sold products</label>
       <select id="status" [(ngModel)]="soldState" name="status" (ngModelChange)="filterProducts()">
@@ -62,22 +70,28 @@ import {FormsModule} from "@angular/forms";
 
       <p>Selected Value: {{ soldState }}</p>
     </form>
-
-    <div>Total deleted: {{deletedProducts.length}}</div>
-    <div>Sold State: {{soldState}}</div>
+    <br>
+    <div>Products Observable</div>
+    <br>
+    <div>Total deleted: {{ deletedProducts.length }}</div>
+    <div>Sold State: {{ soldState }}</div>
     <div>Products in the list: {{ (productsBehaviourSubject$ | async)?.length }}</div>
-    <div>Products sold: {{getSoldProducts().length}}</div>
-    <div>Products to sold: {{getProductsToSold().length}}</div>
+    <div>Products sold: {{ getSoldProducts().length }}</div>
+    <div>Products to sold: {{ getProductsToSold().length }}</div>
+    <br>
     <div *ngFor="let product of filteredProducts$ | async; index as i">
-      {{product.name}}
-      {{product.like}}
-      {{product.dislike}}
-      <span>total likes: {{product.totalLikes}}</span>
+      {{ product.name }}
+      <span [ngClass]="{'selected': category.selected}"
+            *ngFor="let category of product.categories; index as productCategoryIndex"
+      (click)="selectCategoryObservable(product.id ,productCategoryIndex)">{{ category.name }}
+      </span>
+      <span>Like: {{ product.like }}</span>
+      <span>Dislike: {{ product.dislike }}</span>
+      <span>total likes: {{ product.totalLikes }}</span>
       <button (click)="delete(i)">Delete</button>
       <button (click)="like(i)">Like</button>
       <button (click)="dislike(i)">Dislike</button>
     </div>
-    <div (click)="log()">Log</div>
   `,
   styles: [
     `
@@ -99,39 +113,91 @@ import {FormsModule} from "@angular/forms";
 export class ObservableTestComponent implements OnInit {
   // Rxjs Observables
 
-  productsBehaviourSubject$ = new BehaviorSubject<Product[]>([
-    {
-      id: 1,
-      name: 'Mi Band',
-      seller: 'Pcdiga',
-      owner: 'Hugo',
-      sold: true,
-      like: 0,
-      dislike: 0,
-      totalLikes: 0
-    },
-    {
-      id: 2,
-      name: 'Pc Components Mouse',
-      seller: 'Pc Components',
-      owner: 'Pedro',
-      sold: false,
-      like: 0,
-      dislike: 0,
-      totalLikes: 0
-    },
-
-    {
-      id: 3,
-      name: 'Pc Components Keyboard',
-      seller: 'Pc Components',
-      owner: 'Carlos',
-      sold: false,
-      like: 0,
-      dislike: 0,
-      totalLikes: 0
-    }
-  ])
+  productsBehaviourSubject$ = new BehaviorSubject<Product[]>(
+    [
+      {
+        id: 1,
+        name: 'Mi Band',
+        seller: 'Pcdiga',
+        owner: 'Hugo',
+        sold: true,
+        like: 0,
+        dislike: 0,
+        totalLikes: 0,
+        categories: [
+          {
+            id: 1,
+            name: 'computing',
+            selected: false,
+          },
+          {
+            id: 2,
+            name: 'leisure',
+            selected: false
+          },
+          {
+            id: 3,
+            name: 'housing',
+            selected: false
+          }
+        ]
+      },
+      {
+        id: 2,
+        name: 'Pc Components Mouse',
+        seller: 'Pc Components',
+        owner: 'Pedro',
+        sold: false,
+        like: 0,
+        dislike: 0,
+        totalLikes: 0,
+        categories: [
+          {
+            id: 1,
+            name: 'computing',
+            selected: false,
+          },
+          {
+            id: 2,
+            name: 'leisure',
+            selected: false
+          },
+          {
+            id: 3,
+            name: 'housing',
+            selected: false
+          }
+        ]
+      },
+      {
+        id: 3,
+        name: 'Pc Components Keyboard',
+        seller: 'Pc Components',
+        owner: 'Carlos',
+        sold: false,
+        like: 0,
+        dislike: 0,
+        totalLikes: 0,
+        categories: [
+          {
+            id: 1,
+            name: 'computing',
+            selected: false,
+          },
+          {
+            id: 2,
+            name: 'leisure',
+            selected: false
+          },
+          {
+            id: 3,
+            name: 'housing',
+            selected: false
+          }
+        ]
+      }
+    ]
+  )
 
   deletedProductBehaviourSubject$ = new BehaviorSubject<Product[]>([]);
   filteredProducts$ = this.productsBehaviourSubject$.asObservable();
@@ -163,19 +229,23 @@ export class ObservableTestComponent implements OnInit {
   }
 
   like(index: number) {
-    const updatedProducts = this.productsBehaviourSubject$.getValue().map<Product>((product, i) => {
-      return i === index ? {...product, like: product.like! + 1, totalLikes: product.totalLikes! + 1 } : product;
+    const product = this.productsBehaviourSubject$.getValue();
+
+    const updatedProduct = product.map((product, i) => {
+      return i === index ? {...product, like: product.like! + 1, totalLikes: product.totalLikes! + 1} : product
     })
 
-    this.productsBehaviourSubject$.next(updatedProducts);
+    this.productsBehaviourSubject$.next(updatedProduct);
   }
 
   dislike(index: number) {
-    const updatedProducts = this.productsBehaviourSubject$.getValue().map<Product>((product, i) => {
-      return i === index ? {...product, dislike: product.dislike! + 1, totalLikes: product.totalLikes! + 1 } : product;
+    const products = this.productsBehaviourSubject$.getValue();
+
+    const updatedProduct = products.map((product, i) => {
+      return i === index ? {...product, dislike: product.dislike! + 1, totalLikes: product.totalLikes! + 1} : product
     })
 
-    this.productsBehaviourSubject$.next(updatedProducts);
+    this.productsBehaviourSubject$.next(updatedProduct);
   }
 
   filterProducts() {
@@ -190,6 +260,17 @@ export class ObservableTestComponent implements OnInit {
     } else {
       this.filteredProducts$ = this.productsBehaviourSubject$.asObservable();
     }
+  }
+
+  selectCategoryObservable(id: number | undefined, index: number) {
+    const products = this.productsBehaviourSubject$.getValue();
+
+    const updatedProduct = products.map(product => {
+     return product.id === id ? {...product, categories: product.categories?.map((category, i) =>
+       i === index ? {...category, selected: category!.selected = !category!.selected } : category)} : product
+    })
+
+    this.productsBehaviourSubject$.next(updatedProduct)
   }
 
   private updateDeletedProducts() {
