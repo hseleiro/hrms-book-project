@@ -60,6 +60,20 @@ export const routes: Routes = [
     loadComponent: async () => {
       const component = await import('./pages/work/unit-test.component');
       return component.UnitTestComponent;
+    },
+  },
+  {
+    path: 'observable-multiselect',
+    loadComponent: async () => {
+      const component = await import('./pages/work/observable-multiselect');
+      return component.ObservableMultiSelectComponent
+    }
+  },
+  {
+    path: 'signal-multiselect',
+    loadComponent: async () => {
+      const component = await import('./pages/work/signals-multiselect');
+      return component.SignalsMultiselectComponent;
     }
   }
 

@@ -1,7 +1,8 @@
-import {Component, computed, effect, signal} from "@angular/core";
+import {Component, Inject} from "@angular/core";
 import {DatePipe, NgFor, NgIf} from "@angular/common";
+import {FormsModule, ReactiveFormsModule} from "@angular/forms";
+import {TimeOffManagementService} from "../../services/time-off-management.service";
 import {TimeOffRequest} from "../../infrastructures/types/time-off-request.type";
-import {FormControl, FormGroup, FormsModule, ReactiveFormsModule} from "@angular/forms";
 
 @Component({
   selector: 'app-time-off-management',
@@ -72,6 +73,43 @@ import {FormControl, FormGroup, FormsModule, ReactiveFormsModule} from "@angular
   imports: [NgFor, NgIf, DatePipe, FormsModule, ReactiveFormsModule]
 })
 export class TimeOffManagementComponent {
+  private readonly timeOffService = Inject(TimeOffManagementService);
+  requests = this.timeOffService.request;
+  resolvedRequests = this.timeOffService.resolvedRequests;
+  selectedType = this.timeOffService.selectedType
+
+  approveRequest(request: TimeOffRequest) {
+    this.timeOffService.approveRequest(request)
+  }
+
+  rejectRequest(request: TimeOffRequest) {
+    this.timeOffService.rejectRequest(request)
+  }
+
+  deleteRequest(request: TimeOffRequest) {
+    this.timeOffService.deleteRequest(request)
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /*private readonly injector = inject(Injector);
+  private readonly timeOffRequestService = inject(TimeOffRequestsService)
 
   form = new FormGroup({
     type: new FormControl()
@@ -87,7 +125,9 @@ export class TimeOffManagementComponent {
     this.log.destroy();
   }
 
-  requests = signal<TimeOffRequest[]>([
+  requests = toSignal(this.timeOffRequestService.getRequests(), {initialValue: []});
+
+  /*requests = signal<TimeOffRequest[]>([
     {
       id: 1,
       employeeId: 1,
@@ -105,9 +145,9 @@ export class TimeOffManagementComponent {
       status: 'Approved',
       comment: 'Feeling pretty sick today'
     }
-  ]);
+  ]);*/
 
-  selectedType = signal<
+  /*selectedType = signal<
     'Vacation' |
     'Sick Leave' |
     'Maternity Leave' |
@@ -137,9 +177,9 @@ export class TimeOffManagementComponent {
     effect(() => {
       this.count() == 5 ? this.form.get('type')?.disable() : null
     })
-  }
+  }*/
 
-  approveRequest(request: TimeOffRequest) {
+  /*approveRequest(request: TimeOffRequest) {
     this.requests.update((requests) => {
       const index = requests.findIndex((r) => r.id === request.id);
       return requests.map((item, i) => i === index ?
@@ -152,13 +192,21 @@ export class TimeOffManagementComponent {
       const index = requests.findIndex((r) => r.id === request.id)
       return requests.map((item, i) => i === index ? ({...item, status: 'Rejected'}) : item);
     })
-  }
+  }*/
 
   // retorna me todos os que n foram selecionados
-  deleteRequest(request: TimeOffRequest) {
+  /*deleteRequest(request: TimeOffRequest) {
     console.log('request', request);
     this.requests.update((requests) => {
       return requests.filter((r) => r.id !== request.id);
     })
-  }
+  }*/
+
+  /*deleteRequest(request: TimeOffRequest) {
+    this.requests = toSignal(
+      this.timeOffRequestService.deleteRequest(1).pipe(
+        switchMap(() => this.timeOffRequestService.getRequests())
+      )
+    , {initialValue: this.requests(), injector: this.injector})
+  }*/
 }

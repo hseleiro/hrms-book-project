@@ -4,6 +4,7 @@ export interface Product {
   seller: 'Pc Components' | 'Pcdiga',
   owner?: string;
   sold?: boolean;
+  nif?: number;
   deleted?: boolean;
   like?: number
   dislike?: number
