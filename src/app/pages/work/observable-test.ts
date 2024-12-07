@@ -1,5 +1,5 @@
-import {Component, computed, OnInit, signal} from "@angular/core";
-import {AsyncPipe, NgClass, NgForOf, NgIf} from "@angular/common";
+import {ApplicationRef, Component, computed, createComponent, inject, Injector, OnInit, signal} from "@angular/core";
+import {AsyncPipe, NgClass, NgComponentOutlet, NgForOf, NgIf} from "@angular/common";
 import {BehaviorSubject, map, mergeMap} from "rxjs";
 import {Product} from "../../infrastructures/types/product";
 import {FormsModule} from "@angular/forms";
@@ -28,20 +28,20 @@ import {FormsModule} from "@angular/forms";
     <div>Products To Sold: {{ productsToSoldSignal().length }}</div>
     <br>
     <ng-container *ngIf="productsSignal().length > 0; else notFoundObservable">
-      <li *ngFor="let productSignal of filteredSignals(); index as i">
+      <li *ngFor="let productSignal of filteredSignals(); index as productIndex">
         {{ productSignal.name }}
         <br>
         <div *ngIf="setOwnerSignal()">{{ productSignal.owner }}</div>
         <br>
-        <div (click)="deleteSignal(i)">delete</div>
+        <div (click)="deleteSignal(productIndex)">delete</div>
         <br>
         <div>Categories:</div>
         <br>
-        <div>Selecte category</div>
+        <div>Select category</div>
         <br>
         <span *ngFor="let category of productSignal.categories; index as categoryIndex">
           | <span [ngClass]="{'selected' : category.selected}"
-                (click)="selectCategory(categoryIndex, productSignal.id)">{{ category.name }}</span>
+                  (click)="selectCategory(categoryIndex, productIndex, productSignal.nif)">{{ category.name }}</span>
         </span>
         <br>
         <br>
@@ -54,6 +54,7 @@ import {FormsModule} from "@angular/forms";
     <ng-template #notFoundObservable>
       <div>Not Found</div>
     </ng-template>
+    <ng-container *ngComponentOutlet="confirmDialog"></ng-container>
     <br>
     <br>
     <br>
@@ -83,7 +84,7 @@ import {FormsModule} from "@angular/forms";
       {{ product.name }}
       <span [ngClass]="{'selected': category.selected}"
             *ngFor="let category of product.categories; index as productCategoryIndex"
-      (click)="selectCategoryObservable(product.id ,productCategoryIndex)">{{ category.name }}
+            (click)="selectCategoryObservable(product.id ,productCategoryIndex)">{{ category.name }}
       </span>
       <span>Like: {{ product.like }}</span>
       <span>Dislike: {{ product.dislike }}</span>
@@ -106,7 +107,8 @@ import {FormsModule} from "@angular/forms";
     NgForOf,
     FormsModule,
     AsyncPipe,
-    NgClass
+    NgClass,
+    NgComponentOutlet
   ],
   standalone: true
 })
@@ -266,8 +268,8 @@ export class ObservableTestComponent implements OnInit {
     const products = this.productsBehaviourSubject$.getValue();
 
     const updatedProduct = products.map(product => {
-     return product.id === id ? {...product, categories: product.categories?.map((category, i) =>
-       i === index ? {...category, selected: category!.selected = !category!.selected } : category)} : product
+      return product.id === id ? {...product, categories: product.categories?.map((category, i) =>
+          i === index ? {...category, selected: category!.selected = !category!.selected } : category)} : product
     })
 
     this.productsBehaviourSubject$.next(updatedProduct)
@@ -286,9 +288,27 @@ export class ObservableTestComponent implements OnInit {
   }
 
   // Signal
+  injector = inject(Injector);
+  appRef = inject(ApplicationRef);
+  confirmDialog: any = null;
   setOwnerSignal = signal<boolean>(false);
   deletedProductsWritableSignal = signal<Product[]>([]);
   selectedSoldState = signal<string>('allProducts');
+  allowMultipleSelect = signal<boolean>(true)
+  selectedProductSignal = signal<Product>({
+    categories: [],
+    deleted: false,
+    dislike: 0,
+    id: 0,
+    like: 0,
+    name: "",
+    nif: 0,
+    owner: "",
+    seller: "Pcdiga",
+    sold: false,
+    totalLikes: 0
+  })
+  selectedProductNif = signal<number>(0)
   productsSignal = signal<Product[]>(
     [
       {
@@ -297,6 +317,7 @@ export class ObservableTestComponent implements OnInit {
         seller: 'Pcdiga',
         owner: 'Hugo',
         sold: true,
+        nif: 10,
         categories: [
           {
             id: 1,
@@ -321,6 +342,7 @@ export class ObservableTestComponent implements OnInit {
         seller: 'Pc Components',
         owner: 'Pedro',
         sold: false,
+        nif: 11,
         categories: [
           {
             id: 1,
@@ -345,6 +367,32 @@ export class ObservableTestComponent implements OnInit {
         seller: 'Pc Components',
         owner: 'Carlos',
         sold: false,
+        nif: 11,
+        categories: [
+          {
+            id: 1,
+            name: 'computing',
+            selected: false,
+          },
+          {
+            id: 2,
+            name: 'leisure',
+            selected: false
+          },
+          {
+            id: 3,
+            name: 'housing',
+            selected: false
+          }
+        ]
+      },
+      {
+        id: 4,
+        name: 'Pc Components Keyboard',
+        seller: 'Pc Components',
+        owner: 'Carlos',
+        sold: false,
+        nif: 17,
         categories: [
           {
             id: 1,
@@ -383,6 +431,12 @@ export class ObservableTestComponent implements OnInit {
     return this.productsSignal().filter((p) => p.sold === false)
   })
 
+  selectProductsWithEqualNifComputed = computed(() => {
+    return this.productsSignal().some(
+      product => product.nif === this.selectedProductNif() && product.id !== this.selectedProductSignal()?.id
+    ) && this.allowMultipleSelect();
+  })
+
   deleteSignal(index: number) {
     this.getDeleteProductCount(index);
     this.productsSignal.update((products) => {
@@ -394,17 +448,41 @@ export class ObservableTestComponent implements OnInit {
     this.selectedSoldState.set(this.soldStateSignal);
   }
 
-  selectCategory(index: number, productId: number | undefined) {
+  selectCategory(categoryIndex?: number, productIndex?: number, productNif?: number | undefined) {
+    const selectedProduct = this.productsSignal().find((_, index) => index === productIndex);
+    this.selectedProductSignal.set(selectedProduct!);
+    this.selectedProductNif.set(productNif!)
+
+    if(this.selectProductsWithEqualNifComputed()) {
+      this.showConfirmationDialog(categoryIndex!, productIndex!, productNif!);
+    } else {
+      this.productsSignal.update((products) => {
+        return products.map((product, index) =>
+          index === productIndex ? {...product, categories: product.categories?.map((category, index) =>
+              index === categoryIndex ? {...category, selected: category.selected = !category.selected } : category
+            )} : product
+        )
+      })
+    }
+  }
+
+  handleConfirm(categoryIndex: number, productNif: number) {
     this.productsSignal.update((products) => {
+      return products.map((product) =>
+        product.nif === productNif ? {...product, categories: product.categories?.map((category, index) =>
+          index === categoryIndex ? {...category, selected: category.selected = !category.selected } : category
+          )} : product
+      )
+    })
+  }
 
-      const selectedProduct = products.find((product) => product.id === productId);
-
-      if (selectedProduct?.categories) {
-        const selectedCategory = selectedProduct.categories.find((_, i) => i === index);
-        selectedCategory!.selected = !selectedCategory!.selected;
-      }
-
-      return [...products]
+  handleCancel(categoryIndex: number, productIndex: number) {
+    this.productsSignal.update((products) => {
+      return products.map((product, index) =>
+        index === productIndex ? {...product, categories: product.categories?.map((category, index) =>
+            index === categoryIndex ? {...category, selected: category.selected = !category.selected } : category
+          )} : product
+      )
     })
   }
 
@@ -413,4 +491,37 @@ export class ObservableTestComponent implements OnInit {
     this.deletedProductsWritableSignal.update((products) => [...products, ...deletedProduct])
   }
 
+  // dialog
+
+  async showConfirmationDialog(categoryIndex: number, productIndex: number, productNif: number) {
+    const { ConfirmationDialogComponent } = await import(
+      '../../shared/components/confirmation-dialog.component'
+      );
+
+    const dialogRef = createComponent(ConfirmationDialogComponent, {
+      environmentInjector: this.injector.get(ApplicationRef).injector,
+    });
+
+    dialogRef.instance.isConfirmationOpen = true;
+
+    // Pass the arguments to the confirm handler
+    dialogRef.instance.confirm.subscribe(() => {
+      this.handleConfirm(categoryIndex, productNif);
+      this.removeDialog(dialogRef);
+    });
+
+    dialogRef.instance.cancel.subscribe(() => {
+      this.handleCancel(categoryIndex, productIndex);
+      this.removeDialog(dialogRef);
+    });
+
+    this.appRef.attachView(dialogRef.hostView);
+    document.body.appendChild(dialogRef.location.nativeElement);
+    this.allowMultipleSelect.set(false);
+  }
+
+  private removeDialog(dialogRef: any) {
+    this.appRef.detachView(dialogRef.hostView);
+    dialogRef.destroy();
+  }
 }
